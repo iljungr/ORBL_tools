@@ -14,17 +14,27 @@ Download a local alignment or species tree from CodAlignView.
 from __future__ import division, print_function
 
 import sys, os, re
-from .NewickTreeUtil import parse_nh_str
 if sys.version_info[0] < 3 : # pragma: no cover
-    from urllib import urlretrieve
+    from urllib2 import urlopen, HTTPError, URLError
 else : # pragma: no cover
-    from urllib.request import urlretrieve
+    from urllib.request import urlopen
+    from urllib.error import HTTPError, URLError
+from .NewickTreeUtil import parse_nh_str
 
 CodAlignViewBaseURL = 'https://data.broadinstitute.org/compbio1/cav.php'
 TreeBaseURL         = 'https://data.broadinstitute.org/compbio1/CodAlignViewFiles/TreeNHs/'
 
+def get_from_url(url) :
+    """Visit the URL and return the resulting string, ensuring socket is closed."""
+    response = urlopen(url)
+    try:
+        result = response.read().decode('utf-8') # Read returns bytes. Convert to str.
+    finally:
+        response.close()  # ensure socket is closed to avoid ResourceWarning
+    return result
+
 def download_local_alignment(intervalsStr, strand, alnset, removeRefGaps = False,
-                             maxCodons = None, debug = False) :
+                             maxCodons = None) :
     """
     Download a local alignment from CodAlignView and return an aliSeg (a list of pairs
         (species, bases).
@@ -37,23 +47,20 @@ def download_local_alignment(intervalsStr, strand, alnset, removeRefGaps = False
         url += '&h=on&u=on'
     if maxCodons is not None :
         url += '&m=%d' % maxCodons
-    tempFileName = urlretrieve(url)[0]
-
     try :
-        aliSeg = read_fasta(tempFileName)
+        fastaStr = get_from_url(url)
+    except (HTTPError, URLError) :
+        raise NotImplementedError('Could not download alignment for %s %s.' %
+                                  (intervalsStr, strand))
+    try :
+        aliSeg = parse_fasta_str(fastaStr)
     except NotImplementedError :
-        if debug :
-            print('Error in %s' % tempFileName, file = sys.stderr)
-
         # Probably CodAlignView detected a problem. See if we can extract it.
-        fileContents = open(tempFileName).read()
         # Probably html content. Remove all html tags.
-        fileContents = re.sub(r'<[^>]*>', '', fileContents)
+        fileContents = re.sub(r'<[^>]*>', '', fastaStr)
         # Remove "CodAlignView Error"
         fileContents = fileContents.replace('CodAlignView Error\n', '')
-
         raise NotImplementedError(fileContents)
-    os.remove(tempFileName)
     return aliSeg
 
 def download_alnset_tree(alnset) :
@@ -62,36 +69,34 @@ def download_alnset_tree(alnset) :
     Return a NewickTreeUtil.NewickNode containing the root of the tree.
     """
     url = TreeBaseURL + alnset + '.nh'
-    tempFileName = urlretrieve(url)[0]
-
-    with open(tempFileName, 'rt') as tempFile :
-        treeString = tempFile.read().rstrip()
-        if 'not found on this server' in treeString :
-            raise NotImplementedError('No tree file for %s.' % alnset)
-
+    try :
+        treeString = get_from_url(url).rstrip()
+    except (HTTPError, URLError) :
+        raise NotImplementedError('Could not download tree file for %s.' % alnset)
     tree = parse_nh_str(treeString)
-    os.remove(tempFileName)
     return tree
 
-def read_fasta(faFileName) :
-    """Read a fasta file returning list of pairs: (sequence name, sequence)"""
+def parse_fasta_str(fastaStr) :
+    """
+    Read string containing the contents of a file in fasta format, and return a list of
+        pairs: (sequence name, sequence)
+    """
     pairs = []
-    with open(faFileName) as faFile :
-        seqName = None
-        seq = ''
-        for line in faFile :
-            line = line.rstrip()
-            if len(line) == 0 :
-                continue
-            if line[0] == '>' :
-                if seqName is not None :
-                    pairs.append((seqName, seq))
-                seqName = line[1:]
-                seq = ''
-            elif seqName is None :
-                raise NotImplementedError('Not a valid fasta file: %s' % faFileName)
-            else :
-                seq += line
-        if seqName is not None :
-            pairs.append((seqName, seq))
+    seqName = None
+    seq = ''
+    for line in fastaStr.split('\n') :
+        line = line.rstrip()
+        if len(line) == 0 :
+            continue
+        if line[0] == '>' :
+            if seqName is not None :
+                pairs.append((seqName, seq))
+            seqName = line[1:]
+            seq = ''
+        elif seqName is None :
+            raise NotImplementedError('Not valid fasta format.')
+        else :
+            seq += line
+    if seqName is not None :
+        pairs.append((seqName, seq))
     return pairs

@@ -58,9 +58,11 @@ Optional arguments:
 orbl.py takes input from the standard input or a specified file. Input consists of one 
 or more lines, each representing an ORF in the reference species of a multispecies whole 
 genome alignment, specified by the ALIGNMENT_SET mandory argument. Alignment sets are
-defined by CodAlignView [here](https://data.broadinstitute.org/compbio1/cav.php?Alnsets). 
+defined by CodAlignView [here](https://data.broadinstitute.org/compbio1/cav.php?Alnsets). Input is terminated by the end of the input file, or,
+for interactive input, by an empty line. Input lines beginning with a '#' character are
+treated as comments; they are passed through to the output and otherwise ignored.
 
-Each line contains two or more tab-separates fields. The first field is one or nore
+Each line contains two or more tab-separated fields. The first field is one or nore
 chromosomal intervals specifying the coordinates of an open reading frame in the 
 reference species of the alignment. The second field is the strand, either + or -. 
 The format of the first field consists of one or more intervals separated by plus signs: 
@@ -69,7 +71,7 @@ chrom:start1-end1+chrom:start2-end2+...
 ```
 satisfying the requirement that:
 ```
-start1 <= end1 < start2 <= end2... 
+start1 <= end1, start2 <= end2, ... 
 ```
 (even if the region is on the minus strand). 
 

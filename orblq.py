@@ -12,7 +12,11 @@
 Tool for computing ORBLq, a measure of evolutionary constraint on the "ORFness" of an ORF.
 """
 from __future__ import division, print_function
-import os, pickle
+import sys, os
+if sys.version_info[0] < 3 : # pragma: no cover
+    import cPickle as pickle
+else : # pragma: no cover
+    import pickle
 
 BiotypesWithFS = ['uORF', 'uoORF+1', 'uoORF+2', 'intORF+1', 'intORF+2', 
                   'doORF+1', 'doORF+2', 'dORF', 'lncRNA-ORF']

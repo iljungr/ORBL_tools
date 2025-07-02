@@ -18,6 +18,7 @@ if sys.version_info[0] < 3 : # pragma: no cover
     from StringIO import StringIO
 else : # pragma: no cover
     from io import StringIO
+    basestring = str
 
 class StreamCatcher(object) :
     """
@@ -34,6 +35,8 @@ class StreamCatcher(object) :
         do more stuff with streamCatcher.buffer('out') or streamCatcher.buffer('err')
     If kind is not 'both', buffer() may be used instead of buffer('out') or buffer('err'),
         and clear() may be used insteaad of clear('out') or clear('err').
+    If there is a need to print to the original stdout or stderr, for example, to print
+        debugging messages during a unit test, print to sys.__stdout__ or sys.__stderr__.
     Implementation note: to simplify the code, we always save both stderr and stdout,
         but we only suppress output to the two streams if asked to do so.
     """
@@ -114,6 +117,49 @@ class StdoutCatcher(StreamCatcher) :
     def __init__(self) :
         StreamCatcher.__init__(self, 'out')
 
+class StdinSaver(object) :
+    """
+    Context manager that allows sys.stdin to be changed to allow controlling the input
+        when called functions access sys.stdin, while guaranteeing that it is restored
+        at the end.
+    On creation, it can leave sys.stdin as it is (to be changed in the body), or set to
+        an open file or a StringIO with specified initial contents.
+    Usage: (one of the following)
+        with StdinSetter() :
+            change sys.stdin
+            do stuff
+        with StdinSetter(someOpenFile) :
+            do stuff
+        with StdinSetter(someString) :
+            do stuff
+    """
+    def __init__(self, stringOrOpenFile = None) :
+        """
+        Create a StdinSaver that when entered will backup sys.stdin, and, if
+            stringOrOpenFile is not None, set sys.stdin to an open file or a
+            StringIO with specified initial contents.
+        """
+        if isinstance(stringOrOpenFile, basestring) :
+            self.file = StringIO(stringOrOpenFile)
+        else :
+            self.file = stringOrOpenFile
+    def __enter__(self) :
+        self.savedStdin = sys.stdin
+        if self.file is not None :
+            sys.stdin = self.file
+        return self
+    def __exit__(self, exc_type, exc_val, exc_tb) :
+        sys.stdin = self.savedStdin
+
+class InteractiveStringIO(StringIO) :
+    """
+    Class that is just like a StringIO except that it pretends to be a terminal. Pass one
+    of these to StdinSaver in order to unit test code that has special cases for terminal
+    input.
+    """
+    def isatty(self) :
+        return True
+
 class EnvSaver(object) :
     """
     Context manager for temporary changes to os.environ that guarantees it is restored.
@@ -132,13 +178,23 @@ class EnvSaver(object) :
 class SysArgSaver(object) :
     """
     Context manager for temporary changes to sys.argv that guarantees it is restored.
-    Usage:
+    Usage: (one of the following)
         with SysArgSaver() :
             do stuff that could change sys.argv
+        with SysArgSaver(newSysArgv) :
+            do stuff using new sys.argv
         # Now sys.argv has been restored.
     """
+    def __init__(self, newSysArgv = None) :
+        """
+        Create a SysArgSaver that when entered will backup sys.argv, and, if
+            newSysArgv is not None, set sys.stdin to newSysArgv.
+        """
+        self.newSysArgv = newSysArgv
     def __enter__(self) :
         self.backupSysArgv = copy.deepcopy(sys.argv)
+        if self.newSysArgv is not None :
+            sys.argv = self.newSysArgv
         return self
     def __exit__(self, exc_type, exc_val, exc_tb) :
         sys.argv = self.backupSysArgv
