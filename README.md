@@ -17,18 +17,20 @@ It consists of two scores:
   larger numbers indicating more constraint.
 
 ## Installation
+
+Install with the following line on a unix shell. It should only take a few seconds.
 ```
 git clone https://github.com/iljungr/ORBL_tools.git
 ```
-Test by running:
+Test by running the following, which should take less than a minute and not report errors.
 ```
 cd ORBL_tools
 python -m unittest test_ORBL
 ```
-ORBL has been tested in python 2.7.16 and python 3.12.4 but should work using other 
-versions of python 2.7 and 3.
+ORBL has been tested in python 2.7.16 and python 3.12.4 but should work using 
+other versions of python 2.7 and 3.
 
-Requires an internet connection for downloading alignments.
+Running orbl.py requires an internet connection for downloading alignments.
 
 ## Usage Summary
 ```
@@ -58,9 +60,10 @@ Optional arguments:
 orbl.py takes input from the standard input or a specified file. Input consists of one 
 or more lines, each representing an ORF in the reference species of a multispecies whole 
 genome alignment, specified by the ALIGNMENT_SET mandory argument. Alignment sets are
-defined by CodAlignView [here](https://data.broadinstitute.org/compbio1/cav.php?Alnsets). Input is terminated by the end of the input file, or,
-for interactive input, by an empty line. Input lines beginning with a '#' character are
-treated as comments; they are passed through to the output and otherwise ignored.
+defined by CodAlignView [here](https://data.broadinstitute.org/compbio1/cav.php?Alnsets). 
+Input is terminated by the end of the input file, or, for interactive input, by an 
+empty line. Input lines beginning with a '#' character are treated as comments; they 
+are passed through to the output and otherwise ignored.
 
 Each line contains two or more tab-separated fields. The first field is one or nore
 chromosomal intervals specifying the coordinates of an open reading frame in the 
