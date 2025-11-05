@@ -14,7 +14,9 @@ It consists of two scores:
 - ORBLq measures evolutionary constraint on the ORFness of a non-canonical ORF (ncORF)
   by calculating the quantile of its ORBLv score among the ORBLv scores of untranslated 
   ORFs of the same biotype and similar length. It too is a number between 0 and 1, with 
-  larger numbers indicating more constraint.
+  larger numbers indicating more constraint, and 1 – ORBLq can be thought of as a p-value,
+  since it approximates the probability that a similar ORF would get the same or higher
+  ORBLv score under the null hypothesis that its ORFness were not constrained.
 
 ## Installation
 
@@ -89,19 +91,24 @@ intervals go from the first base of the region to the last base, inclusive, and
 coordinates are 1-based, i.e., the 1st base of the chromosome is position 1. Coordinates
 may include commas, which are ignored. 
 
-If the region specified does not begin with ATG or end in a stop codon in the reference 
-species then both ORBLv and ORBLq will be "NA".
+If the region specified is not an ORF in the reference species (i.e., first codon is
+not ATG, last codon is not a stop codon, length is not a multiple of 3 nucleotides, 
+or contains a premature in-frame stop codon) then both ORBLv and ORBLq will be "NA",
+as well as the corresponding components if the --components option is specified.
 
-If --orblq is specified, each input line must inlude a third field, containing the biotype 
-and frameshift relative to the main ORF for biotypes uoORF, intORF, and doORF. Frameshift
-is +1 or +2 depending on whether a ribosome reading the main frame would need to skip 
-1 or 2 nucleotides to get in the frame of the ncORF. Valid values of
+If --orblq is specified, each input line must include a third field, containing the
+biotype and frameshift relative to the main ORF for biotypes uoORF, intORF, and doORF. 
+Frameshift is +1 or +2 depending on whether a ribosome reading the main frame would 
+need to skip 1 or 2 nucleotides to get in the frame of the ncORF. Valid values of
 biotype-with-frameshift are:
 ```
 uORF, uoORF+1, uoORF+2, intORF+1, intORF+2, doORF+1, doORF+2, dORF, and lncRNA-ORF.
 ```
 Biotype "mixed" is also allowed, but ORBLq is not implemented for this biotype and 
-results in a value of "NA".
+results in a value of "NA". If the frameshift for a uoORF, intORF, or doORF is 
+unknown then ORBLq can be computed for both (using two input lines), with further 
+investigation of the frameshift only needed if one but not the other ORBLq value
+exceeds some relevant threshold.
 
 Currently, --orblq is only implemented for the following alignment sets:
 ```
@@ -111,7 +118,7 @@ Input lines may contain additional tab-separated fields, which are passed throug
 the output and otherwise ignored. 
 
 Results are written to the standard output. There is one output line for each input line. 
-Each output line contains the input line followed by the orblv score, the orblq score 
+Each output line contains the input line followed by the orblv score, the ORBLq score 
 if the --orblq option is specified, and three additional fields if --components is 
 specified, namely the relative branch lengths of species having an aligned start codon, 
 an aligned stop codon, and an intact open reading frame.
