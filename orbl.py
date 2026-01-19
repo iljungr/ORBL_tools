@@ -13,7 +13,7 @@ Utility to calculate ORF Relative Branch Length (ORBL) scores for measuring ORFn
 conservation and constraint.
 """
 from __future__ import division, print_function
-import sys, os, itertools, subprocess, shlex
+import sys, os, subprocess
 ThisDir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.dirname(ThisDir)) # ORBL_tools's parent
 from ORBL_tools.IntervalUtils import regionString_to_triples, get_intervals_length
@@ -22,23 +22,21 @@ from ORBL_tools.CalcORFrelBLs import calc_ORF_relBLs
 from ORBL_tools.DownloadLocalAlignment import (
     download_local_alignment, download_alnset_tree)
 from ORBL_tools.orblq import (
-    ORBLqCalculator, BiotypesWithFS, get_untrans_ORBLv_dict_name, get_supported_alnsets)
+    ORBLqCalculator, BiotypesWithFS, get_untrans_ORBLv_dict_name)
+from ORBL_tools.ShowAlignmentSets import show_alignment_sets
 
 VersionStr = 'Beta'
-
-MaxMaxCodons = 40000
 
 print_err = lambda *pArgs : print(*pArgs, file = sys.stderr)
 
 UsageStr = ('(ALIGNMENT_SET (e.g., hg38_120mammals_primate) [--orblq] [--components] '
-            '[FILE] |\n        -h,--help | -v,--version)')
+            '[FILE] |\n        -h,--help | -v,--version | --alignmentSets)')
 AlnsetsURL = 'https://data.broadinstitute.org/compbio1/cav.php?Alnsets'
 
 def main() :
     ## Parse arguments; print user guide if requested
     if (check_arg('-h', remove = True, silent = True) or
         check_arg('--help', remove = True, silent = True)) :
-        assert_num_args(0, UsageStr, exact = True)
         # Display README.md, converting some of the markdown to terminal escape codes.
         with open(os.path.join(ThisDir, 'README.md'), 'rt') as readmeFile :
             outStr = poor_mans_markdown_interpreter(readmeFile.read())
@@ -60,8 +58,10 @@ def main() :
         return
     if (check_arg('-v', remove = True, silent = True) or
         check_arg('--version', remove = True, silent = True)) :
-        assert_num_args(0, UsageStr, exact = True)
         print_err('Version: %s' % VersionStr)
+        return
+    if check_arg('--alignmentSets', remove = True, silent = True) :
+        show_alignment_sets()
         return
     calcOrblQ = check_arg('--orblq', remove = True, silent = True)
     outputComponents = check_arg('--components', remove = True, silent = True)
@@ -72,14 +72,14 @@ def main() :
     inFileName = None if len(sys.argv) == 2 else sys.argv[2]
 
     # Suppress IDE warnings about possible uninitialized variables
-    orblqCalc = biotypeWithFS = None
+    orblqCalc = None
 
     ## Get ORBLq calculator
     if calcOrblQ :
         untransORBLvFileName = get_untrans_ORBLv_dict_name(alnset)
         if not os.path.exists(untransORBLvFileName) :
             print_err('ERROR: ORBLq is not implemented for alignment set "%s".\n' % alnset
-                      + 'Supported alignment sets: ' + ', '.join(get_supported_alnsets()))
+                      + 'Use --alignmentSets argument to see allowed alignment sets.')
             raise SystemExit(1)
         orblqCalc = ORBLqCalculator(alnset)
 
@@ -108,7 +108,7 @@ def main() :
     ## Iterate through input lines and print output lines
     inFile = sys.stdin if inFileName is None else open(inFileName, 'rt')
     try :
-        for lineNumber in itertools.count() : # "for line in ..." waits for EOF to start
+        while True : # "for line in ..." waits for EOF to start
             ## Parse input line
             inputLine = inFile.readline()
             if inputLine == '' : # End of file
@@ -147,8 +147,7 @@ def main() :
 
                 ## Download alignment
                 try :
-                    aliSeg = download_local_alignment(intervalsStr, strand, alnset,
-                                                      maxCodons = MaxMaxCodons)
+                    aliSeg = download_local_alignment(intervalsStr, strand, alnset)
                 except NotImplementedError :
                     return outputLine + '\t' + 'UnableToDownloadAlignment'
 

@@ -32,6 +32,7 @@ class StreamCatcher(object) :
                 contains what is expected.
             Optionally, streamCatcher.clear('out') or streamCatcher.clear('err') and then
                 do more stuff and more checking
+        # Now sys.stdout and sys.stderr have been restored.
         do more stuff with streamCatcher.buffer('out') or streamCatcher.buffer('err')
     If kind is not 'both', buffer() may be used instead of buffer('out') or buffer('err'),
         and clear() may be used insteaad of clear('out') or clear('err').
@@ -100,6 +101,7 @@ class StderrCatcher(StreamCatcher) :
             do stuff
             check that errCatcher.buffer() contains what is expected.
             Optionally, errCatcher.clear() and then  do more stuff and more checking
+        # Now sys.stderr has been restored.
         do more stuff with errCatcher.buffer()
     """
     def __init__(self) :
@@ -108,11 +110,12 @@ class StderrCatcher(StreamCatcher) :
 class StdoutCatcher(StreamCatcher) :
     """
     Usage:
-        with StderrCatcher() as errCatcher :
+        with StdoutCatcher() as outCatcher :
             do stuff
-            check that errCatcher.buffer() contains what is expected.
-            Optionally, errCatcher.clear() and then  do more stuff and more checking
-        do more stuff with errCatcher.buffer()
+            check that outCatcher.buffer() contains what is expected.
+            Optionally, outCatcher.clear() and then  do more stuff and more checking
+        # Now sys.stdout has been restored.
+        do more stuff with outCatcher.buffer()
     """
     def __init__(self) :
         StreamCatcher.__init__(self, 'out')
@@ -127,11 +130,12 @@ class StdinSaver(object) :
     Usage: (one of the following)
         with StdinSetter() :
             change sys.stdin
-            do stuff
+            do stuff that can access sys.stdin
         with StdinSetter(someOpenFile) :
-            do stuff
+            do stuff that can access sys.stdin
         with StdinSetter(someString) :
-            do stuff
+            do stuff that can access sys.stdin
+        # Now sys.stdin has been restored.
     """
     def __init__(self, stringOrOpenFile = None) :
         """
@@ -164,12 +168,16 @@ class EnvSaver(object) :
     """
     Context manager for temporary changes to os.environ that guarantees it is restored.
     Usage:
-        with EnvSaver() :
-            do stuff that could change environment
-        # Now environment has been restored.
+        with EnvSaver(arg1 = value1, arg2 = value2, ...) : # Sets 0 or more env variables
+            do stuff that could make other changes to os.environ
+        # Now os.environ has been restored.
     """
+    def __init__(self, **kArgs) :
+        self.initialChangesDict = copy.deepcopy(kArgs)
     def __enter__(self) :
         self.backupEnviron = copy.deepcopy(os.environ)
+        for key, value in self.initialChangesDict.items() :
+            os.environ[key] = value
         return self
     def __exit__(self, exc_type, exc_val, exc_tb) :
         os.environ.clear()

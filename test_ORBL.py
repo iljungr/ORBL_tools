@@ -23,6 +23,7 @@ from ORBL_tools.orbl import UsageStr as orblUsageStr
 from ORBL_tools.CalcORFrelBLs import _test_calc_seq_conservations
 from ORBL_tools.ContextMgrsForTesting import (
     StreamCatcher, SysArgSaver, StdinSaver, InteractiveStringIO)
+import ORBL_tools.ShowAlignmentSets as ShowAlignmentSets
 if sys.version_info[0] < 3 :
     from itertools import izip_longest as zip_longest
 else :
@@ -65,6 +66,7 @@ class TestORBL(unittest.TestCase) :
     def test_orbl(self) :
         at = self.assertTrue
         ae = self.assertEqual
+        ar = self.assertRaises
         ain = self.assertIn
         aaeq = lambda x, y : at(abs(x - y) < 1e-11)  # "assertAlmostEqual"
         currentVersion = 'Beta'
@@ -100,6 +102,35 @@ class TestORBL(unittest.TestCase) :
                     ae(streamCatcher.buffer('err'), 'Version: %s\n' % currentVersion)
                     ae(streamCatcher.buffer('out'), '')
                     streamCatcher.clear('both')
+
+                ## Test --alignmentSets
+                savePrintHtmlFileName = ShowAlignmentSets.PRINT_HTML_FILE_NAME
+                ShowAlignmentSets.PRINT_HTML_FILE_NAME = True
+                sys.argv = ['orbl.py', '--alignmentSets']
+                orblMain()
+                ae(streamCatcher.buffer('out'), '')
+                htmlFileName = streamCatcher.buffer('err')[:-1] # Remove \n
+                at(os.path.exists(htmlFileName))
+                streamCatcher.clear('both')
+                with open(htmlFileName, 'rt') as htmlFile :
+                    alnsetsHtmlEd = ShowAlignmentSets.AlnsetsHtmlEditor(htmlFile.read())
+                    ae(alnsetsHtmlEd.get_column_names(),
+                       ['Alignment Set', 'ORBLq', 'Reference<br>Assembly',
+                        'Number of<br>Species', 'Source<br>Alignment',
+                        'Subset<br>Description', 'Tree NH', 'Tree PDF'])
+                    # Hidden alnset with ORBLq defined
+                    ain('hg38_447mammals_chimp', alnsetsHtmlEd.get_row_names())
+                    ae(alnsetsHtmlEd.get_values_from_row_name('hg38_447mammals_chimp')[1],
+                       'yes')
+                    # Hidden alnset with ORBLq undefined
+                    self.assertNotIn('hg38_7', alnsetsHtmlEd.get_row_names())
+                    # Visible alnset with ORBLq defined
+                    ae(alnsetsHtmlEd.get_values_from_row_name('hg38')[1], 'yes')
+                    # Visible alnset with ORBLq undefined
+                    ae(alnsetsHtmlEd.get_values_from_row_name('hg18')[1], '')
+                    # Non-existent alnset
+                    ar(ValueError, alnsetsHtmlEd.get_values_from_row_name, 'hg17')
+                ShowAlignmentSets.PRINT_HTML_FILE_NAME = savePrintHtmlFileName
 
                 ## Test non-existent option
                 sys.argv = ['orbl.py', '--q'] # No such option
@@ -169,11 +200,9 @@ class TestORBL(unittest.TestCase) :
                         ae(ex.code, 1)
                     else :
                         self.fail('orbl.py hg18 --orblq did not raise')
-                at(streamCatcher.buffer('err').startswith(
+                ae(streamCatcher.buffer('err'),
                     'ERROR: ORBLq is not implemented for alignment set "hg18".\n'
-                    'Supported alignment sets:'))
-                ain(PlacentalAlnset, streamCatcher.buffer('err'))
-                ain(PrimateAlnset, streamCatcher.buffer('err'))
+                    'Use --alignmentSets argument to see allowed alignment sets.\n')
                 ae(streamCatcher.buffer('out'), '')
                 streamCatcher.clear('both')
 
@@ -244,7 +273,7 @@ chr1:3890992-3891051 +	uORF+1
 # Mixed biotype 
 chr1:3890992-3891051 +	mixed
 # orblv is NA (tab/space between region/strand/biotype)
-chr1:3890995-3891051 +	mixed
+chr1:3890995-3891051 +	uORF
 ''')
 
 ExpectedOutput = ('''# Valid two-interval region; spaces between region/strand/biotype
@@ -272,7 +301,7 @@ chr1:3890992-3891051	+	uORF+1	0.432983873668	InvalidBiotypeWithFS	\
 chr1:3890992-3891051	+	mixed	0.432983873668	NA	0.698355707319	0.856181535801	\
 0.432983873668
 # orblv is NA (tab/space between region/strand/biotype)
-chr1:3890995-3891051	+	mixed	NA	NA	NA	0.856181535801	0.432983873668
+chr1:3890995-3891051	+	uORF	NA	NA	NA	0.856181535801	0.432983873668
 ''')
 
 

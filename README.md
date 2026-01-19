@@ -14,7 +14,7 @@ It consists of two scores:
 - ORBLq measures evolutionary constraint on the ORFness of a non-canonical ORF (ncORF)
   by calculating the quantile of its ORBLv score among the ORBLv scores of untranslated 
   ORFs of the same biotype and similar length. It too is a number between 0 and 1, with 
-  larger numbers indicating more constraint, and 1 – ORBLq can be thought of as a p-value,
+  larger numbers indicating more constraint, and 1 - ORBLq can be thought of as a p-value,
   since it approximates the probability that a similar ORF would get the same or higher
   ORBLv score under the null hypothesis that its ORFness were not constrained.
 
@@ -36,38 +36,42 @@ Running orbl.py requires an internet connection for downloading alignments.
 
 ## Usage Summary
 ```
-python orbl.py (ALIGNMENT_SET [--orblq] [--components] [FILE] | -h,--help | -v,--version)
+python orbl.py (ALIGNMENT_SET [--orblq] [--components] [FILE] |
+                -h,--help | -v,--version | --alignmentSets)
 
 Mandatory arguments:
-   ALIGNMENT_SET Specifies the multispecies alignment as defined by CodAlignView. 
-                 Example: hg38_120mammals_primate.
-    
+   ALIGNMENT_SET Specifies the multi-species whole-genome alignment. Use --alignmentSets 
+                 for the list of available alignment sets. 
+                 Example: hg38_120mammals_primate.    
 
 Optional arguments:
-   -h, --help     Print this message and exit.
-   -v, --version  Print the orbl.py version number and exit.
-   --orblq        Report the ORBLq constraint score as well as the orblv conservation 
-                  score. This requires specifying the biotype-with-frameshift as the 
-                  third field on each input line. Currently, --orblq is only 
-                  implemented for certain alignment sets.
-   --components   Report the relative branch lengths of the species satisfying each
-                  or the three conditions used to consider the ORF to be conserved when
-                  calculating the ORBLv score, namely having an aligned start codon, 
-                  an aligned stop codon, and having an open reading frame (multiple of
-                  3 nucleotides and no in-frame stop codons).
-   FILE           Read input lines from FILE instead of standard input.
+   -h, --help      Print this message and exit.
+   -v, --version   Print the orbl.py version number and exit.
+   --alignmentSets Open a browser window showing information about each allowed alignment
+                   set including whether ORBLq is implemented.
+   --orblq         Report the ORBLq constraint score as well as the orblv conservation 
+                   score. This requires specifying the biotype-with-frameshift as the 
+                   third field on each input line. Currently, --orblq is only 
+                   implemented for certain alignment sets.
+   --components    Report the relative branch lengths of the species satisfying each
+                   or the three conditions used to consider the ORF to be conserved when
+                   calculating the ORBLv score, namely having an aligned start codon, 
+                   an aligned stop codon, and having an open reading frame (multiple of
+                   3 nucleotides and no in-frame stop codons).
+   FILE            Read input lines from FILE instead of standard input.
 ```
 ## Details
 
 orbl.py takes input from the standard input or a specified file. Input consists of one 
-or more lines, each representing an ORF in the reference species of a multispecies whole 
-genome alignment, specified by the ALIGNMENT_SET mandory argument. Alignment sets are
-defined by CodAlignView [here](https://data.broadinstitute.org/compbio1/cav.php?Alnsets). 
-Input is terminated by the end of the input file, or, for interactive input, by an 
-empty line. Input lines beginning with a '#' character are treated as comments; they 
-are passed through to the output and otherwise ignored.
+or more lines, each representing an ORF in the reference species of a multi-species whole 
+genome alignment, specified by the ALIGNMENT_SET mandory argument. Alignment sets include
+all those defined by CodAlignView [here](https://data.broadinstitute.org/compbio1/cav.php?Alnsets), 
+as well as some subclades of those. Use the --alignmentSets argument to see the complete 
+list. Input is terminated by the end of the input file, or, for interactive input, by an 
+empty line. Input lines beginning with a '#' character are treated as comments; they are 
+passed through to the output and otherwise ignored.
 
-Each line contains two or more tab-separated fields. The first field is one or nore
+Each line contains two or more tab-separated fields. The first field is one or more
 chromosomal intervals specifying the coordinates of an open reading frame in the 
 reference species of the alignment. The second field is the strand, either + or -. 
 The format of the first field consists of one or more intervals separated by plus signs: 
@@ -106,14 +110,13 @@ uORF, uoORF+1, uoORF+2, intORF+1, intORF+2, doORF+1, doORF+2, dORF, and lncRNA-O
 ```
 Biotype "mixed" is also allowed, but ORBLq is not implemented for this biotype and 
 results in a value of "NA". If the frameshift for a uoORF, intORF, or doORF is 
-unknown then ORBLq can be computed for both (using two input lines), with further 
-investigation of the frameshift only needed if one but not the other ORBLq value
-exceeds some relevant threshold.
+unknown then we suggest computing ORBLq for both +1 and +2 (using two input lines), 
+with further investigation of the frameshift only needed if one but not the other 
+ORBLq value exceeds some threshold of interest.
 
-Currently, --orblq is only implemented for the following alignment sets:
-```
-hg38_120mammals_placental, hg38_120mammals_primate
-```
+Currently, --orblq is only implemented for the human hg38/GRCh38 assembly, and for
+only some of its alignment sets. Use the --alignmentSets option to see which ones.
+
 Input lines may contain additional tab-separated fields, which are passed through to 
 the output and otherwise ignored. 
 

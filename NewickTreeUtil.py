@@ -190,16 +190,32 @@ def calc_all_depths(root, ignoreBranchLengths = False) :
 def parse_nh_str(treeStr) :
     """
     Parse a string in Newick tree format and return the root.
-    Although not part of the Newick specification, we treat lines at the beginning
-        that start with '#' as comments, and ignore them.
-    We do not handle Newick comments enclosed in square brackets.
-
     Newick format example:
     ((((((dmel:0.061361,(dsim:0.054894,dsec:0.031243):0.031837):0.063495,\
     (dyak:0.111338,dere:0.100461):0.039892):0.357431,dana:0.581114):0.243592,\
     (dpse:0.033045,dper:0.036095):0.495254):0.224541,dwil:0.801425):0.249420,\
     ((dvir:0.301255,dmoj:0.453117):0.141069,dgri:0.434875):0.249455);
     Names before colon for internal nodes are optional.
+
+    Known departures from Newick specification, e.g.,
+        https://www.life.illinois.edu/gary/Newicks_845_Tree_Std.html
+    It states:
+        Unquoted labels may not contain blanks, parentheses, square brackets,
+            single_quotes, colons, semicolons, or commas.
+        Underscore characters in unquoted labels are converted to blanks.
+        Single quote characters in a quoted label are represented by two single quotes.
+        Blanks or tabs may appear anywhere except within unquoted labels or
+            branch_lengths.
+        Newlines may appear anywhere except within labels or branch_lengths.
+        Comments are enclosed in square brackets and may appear anywhere newlines are permitted.
+    - We do not handle Newick comments enclosed in square brackets.
+    - We do not handle quoted node names (names enclosed in single quotes).
+    - We do not convert underscores to blanks.
+    - Although not part of the Newick specification, we treat lines at the beginning
+        that start with '#' as comments, and ignore them.
+    - Note that PhyloCSF does not allow any of the following characters in node names,
+      so they should be avoided in trees that will be used for PhyloCSF even if they are
+      allowed in the Newick Tree specification: '-()[]{},:!@~`#$%^&*+=\\|\'"<>/?'
     """
     treeStr = treeStr.rstrip()
     while treeStr.startswith('#') : # Remove comment lines
