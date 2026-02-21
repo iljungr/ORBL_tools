@@ -91,7 +91,7 @@ class TestORBL(unittest.TestCase) :
                     ae(streamCatcher.buffer('err'), '') # Nothing written to stderr
                     outStr = streamCatcher.buffer('out')
                     # Check approximate length, leaving room for future changes to README.md
-                    at(4000 < len(outStr) < 8000)
+                    at(8000 < len(outStr) < 16000)
                     ain('constraint', outStr) # Likely regardless of changes to README.md
                     streamCatcher.clear('both')
 
