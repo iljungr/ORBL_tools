@@ -31,14 +31,11 @@ abstract: >
   alignments to obtain the local alignment of the ORF in a particular clade, and
   then computes two scores, ORBLv and ORBLq. ORBLv measures conservation of
   ORFness by calculating the relative branch length of the phylogenetic tree of
-  species in the alignment that have an intact orthologous ORF, i.e., in which
-  there is an aligned ATG start codon, stop codon, and open reading frame. It is
-  a number between 0 and 1, with larger numbers indicating more conservation.
-  ORBLq measures evolutionary constraint on ORFness by calculating the quantile
-  of its ORBLv score among the ORBLv scores of untranslated ORFs of the same
-  biotype and similar length. It too is a number between 0 and 1, with larger
-  numbers indicating more constraint. The number 1 - ORBLq can be thought of as
-  a p-value, since it approximates the probability that a similar ORF would get
-  the same or higher ORBLv score under the null hypothesis that its ORFness were
-  not constrained.
-
+  species in the alignment in which there is an aligned ATG start codon, stop
+  codon, and open reading frame. ORBLq measures evolutionary constraint on
+  ORFness by calculating the quantile of its ORBLv score among the ORBLv scores
+  of untranslated ORFs of the same biotype and similar length, in order to
+  correct for conservation due to chance or to constraint on an overlapping CDS.
+  By detecting evolutionary constraint on translation itself, ORBL expands the 
+  scope of comparative genomics to detect functional ORFs that would be missed
+  by conventional protein conservation analyses.

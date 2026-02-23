@@ -22,6 +22,10 @@ particular clade, and then computes two scores:
   p-value, since it approximates the probability that a similar ORF would get the same or
   higher ORBLv score under the null hypothesis that its ORFness were not constrained.
 
+By detecting evolutionary constraint on translation itself, ORBL expands the 
+scope of comparative genomics to detect functional ORFs that would be missed
+by conventional protein conservation analyses.
+
 ## Installation
 
 Install with the following line on a unix shell. It should only take a few seconds.
@@ -185,12 +189,15 @@ Questions should be directed to [Irwin Jungreis](mailto:iljungr@csail.mit.edu)
 
 ## Citing ORBL
 
-If you use ORBL, please cite, "High-quality peptide evidence for 
+If you use ORBL, please cite:
+- "High-quality peptide evidence for 
 annotating non-canonical open reading frames as human proteins" by Deutsch et al 
-(manuscript submitted). 
+(manuscript submitted).
+- [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18749291.svg)](https://doi.org/10.5281/zenodo.18749291)
 
-More information about ORBL can be found in that paper. The specific requirements 
-for determining an ORF's biotype are reported in the supplementary materials.
+More information about ORBL can be found in the Deutsch et al paper. The specific
+requirements for determining an ORF's biotype are reported in the supplementary
+materials.
 
 ## References
 
