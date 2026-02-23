@@ -190,10 +190,12 @@ Questions should be directed to [Irwin Jungreis](mailto:iljungr@csail.mit.edu)
 ## Citing ORBL
 
 If you use ORBL, please cite:
-- "High-quality peptide evidence for 
-annotating non-canonical open reading frames as human proteins" by Deutsch et al 
-(manuscript submitted).
-- [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18749291.svg)](https://doi.org/10.5281/zenodo.18749291)
+- **Deutsch et al.** High-quality peptide evidence for 
+annotating non-canonical open reading frames as human proteins. 
+*(manuscript submitted)*.
+- **Jungreis, I** ORBL_tools: tools for measuring evolutionary conservation 
+  and constraint of 'ORFness' of an open reading frame. (v0.9-beta). *Zenodo*. (2026).
+  [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18749291.svg)](https://doi.org/10.5281/zenodo.18749291)
 
 More information about ORBL can be found in the Deutsch et al paper. The specific
 requirements for determining an ORF's biotype are reported in the supplementary
