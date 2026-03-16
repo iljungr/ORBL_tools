@@ -11,13 +11,13 @@
 """
 Implementation of orbl --alignmentSets.
 Create an html file containing all visible alnsets from CodAlignView plus any hidden ones
-    for which there orblq is defined. Add a column "ORBLq" that specifies for
-    each alnset whether orblq is defined. Then open it in a browser.
+    for which orblq is defined. Add a column "ORBLq" that specifies for each alnset
+    whether orblq is defined. Then open it in a browser.
 """
 from __future__ import division, print_function
 import re, os, sys, tempfile, webbrowser
 from .DownloadLocalAlignment import get_from_url
-from .orblq import get_untrans_ORBLv_dict_name
+from .orblq import get_orblq_alnsets
 try:
     # Py3
     from html import escape as _html_escape
@@ -29,22 +29,32 @@ except ImportError:
     _html_escape = lambda s: cgi.escape(s, quote=True)
     _html_unescape = HTMLParser.HTMLParser().unescape
 
-# For unit testing, don't invoke browser; just print temporary html file name to stderr.
-PRINT_HTML_FILE_NAME = False
+# The following flag is to be set in unit testing to force printing of the name of the
+# html file and a text version of the Alignment Set list rather than opening a browser
+# window.
+SHOW_ALNSETS_AS_TEXT = False
 
 AlnsetsURL = 'https://data.broadinstitute.org/compbio1/cav.php?Alnsets'
+TreeURLprefix = 'https://data.broadinstitute.org/compbio1/CodAlignViewFiles'
 
 def show_alignment_sets() :
+    """
+    Create a temporary html file similar to CodAlignView's Alignment Set page, except:
+        - Include those hidden Alignment Sets for which ORBLq is implemented.
+        - Add a column indicating for each Alignment Set whether ORBLq is implemented.
+    Normally, open the html file in a browser, but if SHOW_ALNSETS_AS_TEXT then print the
+        name of the html file and a text version of the Alignment Set list to stderr
+        rather than opening a browser window. Also do that if the browser fails to open.
+    """
     alnsetsWithoutHiddenHtml = get_from_url(AlnsetsURL)
     visibleAlnsetSet = set(AlnsetsHtmlEditor(alnsetsWithoutHiddenHtml).get_row_names())
     alnsetsWithHiddenHtml = get_from_url(AlnsetsURL + '&sha')
     alnsetsWithHiddenHtmlEditor = AlnsetsHtmlEditor(alnsetsWithHiddenHtml)
     allAlnsets = alnsetsWithHiddenHtmlEditor.get_row_names()
-    orblqAlnsetSet = set(alnset for alnset in allAlnsets
-                         if os.path.exists(get_untrans_ORBLv_dict_name(alnset)))
-    keepAlnsets = visibleAlnsetSet | orblqAlnsetSet
+    orblqAlnsetSet = set(get_orblq_alnsets())
     for alnset in allAlnsets :
-        if not alnset in keepAlnsets :
+        # Show alnset only if it is normally visible or orblq is implemented
+        if alnset not in visibleAlnsetSet and alnset not in orblqAlnsetSet :
             alnsetsWithHiddenHtmlEditor.remove_row(alnset)
     alnsetsWithHiddenHtmlEditor.add_column(
         'ORBLq', 1, ['yes' if alnset in orblqAlnsetSet else ''
@@ -54,22 +64,75 @@ def show_alignment_sets() :
     os.write(fhandle, alnsetsWithHiddenHtmlEditor.get_html().encode('utf-8'))
     os.close(fhandle)
 
-    if PRINT_HTML_FILE_NAME :
-        # For unit testing, don't invoke browser; just print temporary html file name.
-        print(fname, file = sys.stderr)
-        return
-
-    if os.name == 'nt':
+    if os.name == 'nt': # pragma: no cover
         # Normalize backslashes to forward slashes for a URL.
         url = 'file:///' + fname.replace('\\', '/')
     else:
         url = 'file://' + fname
-    ok = webbrowser.open(url, new=2)  # new=2 requests a new tab if possible
-    # os.remove(fname) # Don't remove because we get here before browser opens it
-    if not ok:
-        print('Warning: webbrowser could not confirm it opened %s.' % fname,
-              file=sys.stderr)
-        raise SystemExit(1)
+
+    if SHOW_ALNSETS_AS_TEXT or not webbrowser.open(url, new = 2) :
+        print('Alignment Set list was written to %s.' % fname, file = sys.stderr)
+        print('However, could not open web browser. Printing a text version instead.',
+              file = sys.stderr)
+        print(get_alnsets_as_text(alnsetsWithHiddenHtmlEditor),
+              file = sys.stderr) # Prints a blank line after table
+        print('Tree files in Newick and pdf format can be found in:\n' +
+              '    ' + TreeURLprefix + '/TreeNHs/{Alignment Set}.nh\n' +
+              '    ' + TreeURLprefix + '/TreePdfs/{Alignment Set}.pdf',
+              file = sys.stderr)
+
+def get_alignment_set_assembly(alnset) :
+    """ Return the reference assembly for this alignment set. """
+    alnsetsWithHiddenHtml = get_from_url(AlnsetsURL + '&sha')
+    alnsetsWithHiddenHtmlEditor = AlnsetsHtmlEditor(alnsetsWithHiddenHtml)
+    assert alnsetsWithHiddenHtmlEditor.get_column_names()[1] == 'Reference<br>Assembly', (
+        'Assembly is not column 1.')
+    return alnsetsWithHiddenHtmlEditor.get_values_from_row_name(alnset)[1]
+
+def get_alnsets_as_text(alnsetsHtmlEditor) :
+    """
+    Return a text representation of an AlnsetsHtmlEditor as follows:
+    - For each column determine the maximum number of characters of any value in that
+      column.
+    - Create a text string in which the row headers are centered in fields of width one
+      more than the maximum width for that column.
+    - For each non-header row, add a text string in which the value in each column is left
+      justified in a field of width one more than the maximum width for that column.
+    - Exclude the last two columns, because they would be too wide.
+    """
+    columnNames = alnsetsHtmlEditor.get_column_names()[:-2]
+    rowNames = alnsetsHtmlEditor.get_row_names()
+
+    rows = [columnNames]
+    for rowName in rowNames:
+        rows.append(alnsetsHtmlEditor.get_values_from_row_name(rowName)[:-2])
+
+    colWidths = []
+    for colNum in range(len(columnNames)):
+        headerLines = columnNames[colNum].split('<br>')
+        headerWidth = max(len(line) for line in headerLines)
+        valueWidth = max(len(row[colNum]) for row in rows[1:]) if len(rows) > 1 else 0
+        colWidths.append(max(headerWidth, valueWidth))
+
+    headerLine1 = []
+    headerLine2 = []
+    for colNum in range(len(columnNames)):
+        headerParts = columnNames[colNum].split('<br>', 1)
+        if len(headerParts) == 2:
+            part1, part2 = headerParts
+        else:
+            part1, part2 = headerParts[0], ''
+        headerLine1.append(part1.center(colWidths[colNum] + 1))
+        headerLine2.append(part2.center(colWidths[colNum] + 1))
+
+    lines = []
+    lines.append(''.join(headerLine1))
+    lines.append(''.join(headerLine2))
+    for row in rows[1:]:
+        lines.append(''.join(row[colNum].ljust(colWidths[colNum] + 1)
+                             for colNum in range(len(columnNames))))
+
+    return '\n'.join(lines) + '\n'
 
 class AlnsetsHtmlEditor(object):
     # Class for manipulating the html text containing a CodAlignView Alignment Sets table.
@@ -79,201 +142,74 @@ class AlnsetsHtmlEditor(object):
         Read html text in format produced by CodAlignView's "Alignment Sets" command.
         """
         self.html = htmlText
-        # Parse and cache a structured representation of the table.
         self._parse()
 
     def _parse(self):
-        """
-        Internal: parse the single CodAlignView table into:
-          - self._table_open, self._table_close
-          - self._thead_full (original thead), and replacement points
-          - self._headers: list of dicts {attrs, inner_html}
-          - self._rows: list of dicts {tr_attrs, cells:[{tag, attrs, inner_html}]}
-        """
-        # Extract the first <table> ... </table> block
-        m = re.search(r'(?is)(<table\b[^>]*>)(.*?)(</table>)', self.html)
-        if not m:
-            raise ValueError("No <table>...</table> found in HTML.")
-        self._table_open, table_inner, self._table_close = (
-            m.group(1), m.group(2),  m.group(3))
-
-        # Extract <thead>...</thead>
-        mt = re.search(r'(?is)(<thead\b[^>]*>)(.*?)(</thead>)', table_inner)
-        if not mt:
-            raise ValueError("No <thead>...</thead> found inside table.")
-        thead_open, thead_inner, thead_close = mt.group(1), mt.group(2), mt.group(3)
-        self._thead_open = thead_open
-        self._thead_close = thead_close
-
-        # Find the first header <tr> within thead
-        mtr = re.search(r'(?is)(<tr\b[^>]*>)(.*?)(</tr>)', thead_inner)
-        if not mtr:
-            raise ValueError("No header <tr> found inside <thead>.")
-        self._thead_prefix = thead_inner[:mtr.start(1)]
-        self._thead_tr_open = mtr.group(1)
-        header_tr_inner = mtr.group(2)
-        self._thead_tr_close = mtr.group(3)
-        self._thead_suffix = thead_inner[mtr.end(3):]
-
-        # Parse header cells (<th ...>...</th>)
-        headers = []
-        for tag, attrs, inner in re.findall(r'(?is)<(th)\b([^>]*)>(.*?)</\1>',
-                                            header_tr_inner):
-            headers.append({'attrs': attrs, 'inner_html': inner})
-        if not headers:
-            raise ValueError("No <th> header cells found in header row.")
-        self._headers = headers
-
-        # Body is everything after </thead> within table_inner
-        body = table_inner[mt.end(3):]
-
-        # Parse each body row <tr ...>...</tr>
-        rows = []
-        for tr_attrs, tr_inner in re.findall(r'(?is)<tr\b([^>]*)>(.*?)</tr>', body):
-            cells = []
-            for tag, attrs, inner in re.findall(r'(?is)<(th|td)\b([^>]*)>(.*?)</\1>',
-                                                tr_inner):
-                cells.append({'tag': tag.lower(), 'attrs': attrs, 'inner_html': inner})
-            # Skip rows with no cells (defensive)
-            if cells:
-                rows.append({'tr_attrs': tr_attrs, 'cells': cells})
-        if not rows:
-            raise ValueError("No body <tr> rows found after <thead>.")
-
-        self._rows = rows
+        beforeTable, rest = self.html.split('<table>\n', 1)
+        tableText, afterTable = rest.split('</table>', 1)
+        self._beforeTable = beforeTable
+        self._afterTable = afterTable
+        headerText, bodyText = tableText.split('</thead>', 1)
+        headerRowText = re.search(r'<tr>\s*(.*?)\s*</tr>', headerText, re.S).group(1)
+        self._columnNames = re.findall(r'<th>(.*?)</th>', headerRowText, re.S)
+        rowTexts = re.findall(r'<tr>\s*(.*?)\s*</tr>', bodyText, re.S)
+        self._rows = []
+        for rowText in rowTexts :
+            cells = re.findall(r'<t[hd](?: align="left")?>(.*?)</t[hd]>', rowText, re.S)
+            self._rows.append(cells)
 
     def _serialize(self):
-        """
-        Internal: build updated HTML text from cached structures and replace the original
-        table.
-        """
-        # Rebuild header <tr>...</tr>
-        header_cells_html = []
-        for h in self._headers:
-            attrs = h['attrs'] or ''
-            header_cells_html.append('<th{0}>{1}</th>'.format(attrs, h['inner_html']))
-        header_tr_html = (self._thead_tr_open + '\n'.join(header_cells_html) +
-                          self._thead_tr_close)
+        lines = [self._beforeTable + '<table>',
+                 '                <thead>',
+                 '                    <tr>']
+        for columnName in self._columnNames :
+            lines.append('                        <th>%s</th>' % columnName)
+        lines.extend(['                    </tr>',
+                      '                </thead>'])
 
-        thead_html = (
-            self._thead_open +
-            self._thead_prefix +
-            header_tr_html +
-            self._thead_suffix +
-            self._thead_close
-        )
+        for row in self._rows :
+            lines.append('                <tr>')
+            lines.append('                    <th align="left">%s</th>' % row[0])
+            for value in row[1:] :
+                lines.append('                    <td>%s</td>' % value)
+            lines.append('                </tr>')
 
-        # Rebuild body rows
-        body_rows_html = []
-        for r in self._rows:
-            tr_attrs = r['tr_attrs'] or ''
-            cells_html = []
-            for c in r['cells']:
-                attrs = c['attrs'] or ''
-                tag = c['tag']
-                cells_html.append('<{0}{1}>{2}</{0}>'.format(tag, attrs, c['inner_html']))
-            body_rows_html.append('<tr{0}>\n{1}\n</tr>'.format(tr_attrs,
-                                                               '\n'.join(cells_html)))
+        lines.append('            </table>')
+        self.html = '\n'.join(lines) + self._afterTable
 
-        table_html = (self._table_open + thead_html + '\n'.join(body_rows_html) + '\n' +
-                      self._table_close)
-
-        m = re.search(r'(?is)(<table\b[^>]*>)(.*?)(</table>)', self.html)
-        start, end = m.start(1), m.end(3)
-        self.html = self.html[:start] + table_html + self.html[end:]
+    def get_html(self):
+        return self.html
 
     def get_column_names(self):
-        return [cell['inner_html'] for cell in self._headers]
+        return self._columnNames[:]
 
     def get_row_names(self):
-        """
-        Return a list containing the row names (i.e., the first column of the table).
-        """
-        names = []
-        for r in self._rows:
-            first = r['cells'][0]
-            # In your sample, first cell is <th align="left">ROWNAME</th>
-            # Treat inner_html as text and unescape entities; strip whitespace.
-            text = re.sub(r'(?is)<.*?>', '', first['inner_html'])
-            text = _html_unescape(text).strip()
-            names.append(text)
-        return names
+        return [row[0] for row in self._rows]
 
     def get_values_from_row_name(self, rowName):
-        for r in self._rows :
-            if r['cells'][0]['inner_html'] == rowName :
-                return [cell['inner_html'] for cell in r['cells']]
-        else :
-            raise ValueError('No row with name %s.' % rowName)
+        for row in self._rows :
+            if row[0] == rowName :
+                return row[:]
+        raise ValueError('No row with name %s.' % rowName)  # pragma: no cover
 
     def add_column(self, columnName, beforeIndex, values):
         """
         Add a column to the table with specified columnName in the header, and the
-            specified list of values. Check that the number of values equals the number
-            of rows in the table (not counting the header).
+            specified list of values.
         """
-        if values is None:
-            raise ValueError("values must be a list (got None).")
-        if len(values) != len(self._rows):
-            raise ValueError(
-                "values length ({0}) does not match number of rows ({1})."
-                .format(len(values), len(self._rows))
-            )
-
-        ncols = len(self._headers)
-        if beforeIndex < 0 or beforeIndex > ncols:
-            raise IndexError(
-                "beforeIndex out of range: {0} (valid: 0..{1})"
-                .format(beforeIndex, ncols)
-            )
-
-        # Insert header cell
-        safe_header = _html_escape(str(columnName))
-        self._headers.insert(beforeIndex, {'attrs': '', 'inner_html': safe_header})
-
-        # Insert each row cell at the same index. Use <td> for inserted column.
-        for i, r in enumerate(self._rows):
-            safe_val = _html_escape(str(values[i]))
-            new_cell = {'tag': 'td', 'attrs': '', 'inner_html': safe_val}
-
-            # Defensive: if a row has fewer cells than headers (unexpected), pad with
-            # empty <td>.
-            while len(r['cells']) < ncols:
-                r['cells'].append({'tag': 'td', 'attrs': '', 'inner_html': ''})
-
-            r['cells'].insert(beforeIndex, new_cell)
-
-        # Rebuild HTML
+        assert len(values) == len(self._rows)
+        self._columnNames.insert(beforeIndex, _html_escape(str(columnName)))
+        for row, value in zip(self._rows, values) :
+            row.insert(beforeIndex, _html_escape(str(value)))
         self._serialize()
 
     def remove_row(self, rowName):
         """
         Remove the row with specified name (name is the value in the first column)
         """
-        # Match against decoded/stripped first-cell text (same method as get_row_names).
-        target = _html_unescape(str(rowName)).strip()
-
-        new_rows = []
-        removed = 0
-        for r in self._rows:
-            first = r['cells'][0]
-            text = re.sub(r'(?is)<.*?>', '', first['inner_html'])
-            text = _html_unescape(text).strip()
-            if text == target:
-                removed += 1
-                continue
-            new_rows.append(r)
-
-        if removed == 0:
-            raise KeyError("Row not found: {0}".format(rowName))
-        if removed > 1:
-            # Unusual for this table, but explicitly flag it rather than silently removing
-            # multiples.
-            raise ValueError(
-                "Multiple rows matched rowName {0}.".format(rowName))
-
-        self._rows = new_rows
-        self._serialize()
-
-    def get_html(self) :
-        return self.html
+        for i, row in enumerate(self._rows) :
+            if row[0] == rowName :
+                del self._rows[i]
+                self._serialize()
+                return
+        raise ValueError('No row with name %s.' % rowName)  # pragma: no cover

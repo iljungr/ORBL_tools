@@ -27,7 +27,7 @@ UntransORBLvDictsDir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
 def get_untrans_ORBLv_dict_name(alnset) :
     return os.path.join(UntransORBLvDictsDir, 'UntransORBLvDict.%s.cp' % alnset)
 
-def get_supported_alnsets() :
+def get_orblq_alnsets() :
     untransORBLvDictFileNames = os.listdir(UntransORBLvDictsDir)
     supportedAlnsets = [fname[len('UntransORBLvDict.') : -3]
                         for fname in untransORBLvDictFileNames

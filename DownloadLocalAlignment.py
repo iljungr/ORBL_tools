@@ -50,7 +50,7 @@ def download_local_alignment(intervalsStr, strand, alnset, returnFasta = False,
         url += '&h=on&u=on'
     try :
         fastaStr = get_from_url(url)
-    except (HTTPError, URLError) :
+    except (HTTPError, URLError) : # pragma: no cover
         raise NotImplementedError('Could not download alignment for %s %s.' %
                                   (intervalsStr, strand))
     # Convert the fasta string to pairs even if returnFasta in order to check validity
@@ -125,7 +125,7 @@ def main() :
 
     ## Download tree file as a check for valid alnset
     try :
-        tree = download_alnset_tree(alnset)
+        download_alnset_tree(alnset)
     except NotImplementedError :
         print('ERROR: Invalid Alignment Set "%s".\n' % alnset
               + 'Choose alignment set from list at: %s' %

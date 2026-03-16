@@ -23,11 +23,12 @@ keywords:
   - whole genome alignments
   - CodAlignView
 abstract: >
-  ORBL measures cross-species evolutionary conservation and constraint on the
-  "ORFness" of an open reading frame (ORF), without regard to conservation of
-  the encoded amino acid sequence. It is intended to distinguish ORFs, such as
-  regulatory uORFs, whose translation is functional, but which do not
-  necessarily encode a functional peptide. It uses multi-species whole genome
+  ORF Relative Branch Length (ORBL) measures cross-species evolutionary
+  conservation and constraint on the "ORFness" of an open reading frame (ORF),
+  without regard to conservation of the encoded amino acid sequence. It is
+  intended to detect ORFs, such as regulatory uORFs, whose translation is
+  functional but which do not necessarily encode a functional peptide, as well
+  as ORFs encoding poorly conserved peptides. It uses multispecies whole genome
   alignments to obtain the local alignment of the ORF in a particular clade, and
   then computes two scores, ORBLv and ORBLq. ORBLv measures conservation of
   ORFness by calculating the relative branch length of the phylogenetic tree of
@@ -36,6 +37,6 @@ abstract: >
   ORFness by calculating the quantile of its ORBLv score among the ORBLv scores
   of untranslated ORFs of the same biotype and similar length, in order to
   correct for conservation due to chance or to constraint on an overlapping CDS.
-  By detecting evolutionary constraint on translation itself, ORBL expands the 
+  By detecting evolutionary constraint on translation itself, ORBL expands the
   scope of comparative genomics to detect functional ORFs that would be missed
   by conventional protein conservation analyses.

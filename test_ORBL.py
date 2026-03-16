@@ -71,7 +71,20 @@ class TestORBL(unittest.TestCase) :
         aaeq = lambda x, y : at(abs(x - y) < 1e-11)  # "assertAlmostEqual"
         currentVersion = 'Beta'
 
+        # Get names for temporary files
+        tempHandle, tempInName  = tempfile.mkstemp(suffix = '.in')
+        os.close(tempHandle)
+        tempHandle, tempOutName = tempfile.mkstemp(suffix = '.tsv')
+        os.close(tempHandle)
+        tempHandle, tempBedName = tempfile.mkstemp(suffix = '.bed')
+        os.close(tempHandle)
+
         def compare_output_lines(l1, l2) :
+            """
+            Compare two lines allowing tiny differences in floats. This is needed because
+                string conversion of floats is different in Python 2 and Python 3, so
+                output of orbl will differ.
+            """
             words1 = l1.split('\t')
             words2 = l2.split('\t')
             ae(len(words1), len(words2), str((words1, words2)))
@@ -82,6 +95,11 @@ class TestORBL(unittest.TestCase) :
                     except ValueError :
                         self.fail('%s != %s' % (word1, word2))
 
+        def compare_outputs(t1, t2) :
+            ae(t1.count('\n'), t2.count('\n'))
+            for l1, l2 in zip(t1.split('\n'), t2.split('\n')) :
+                compare_output_lines(l1, l2)
+
         with StreamCatcher('both') as streamCatcher :
             with SysArgSaver() :
                 ## Test help
@@ -91,7 +109,7 @@ class TestORBL(unittest.TestCase) :
                     ae(streamCatcher.buffer('err'), '') # Nothing written to stderr
                     outStr = streamCatcher.buffer('out')
                     # Check approximate length, leaving room for future changes to README.md
-                    at(8000 < len(outStr) < 16000)
+                    at(13000 < len(outStr) < 26000, 'outStr length = %d' % len(outStr))
                     ain('constraint', outStr) # Likely regardless of changes to README.md
                     streamCatcher.clear('both')
 
@@ -104,13 +122,32 @@ class TestORBL(unittest.TestCase) :
                     streamCatcher.clear('both')
 
                 ## Test --alignmentSets
-                savePrintHtmlFileName = ShowAlignmentSets.PRINT_HTML_FILE_NAME
-                ShowAlignmentSets.PRINT_HTML_FILE_NAME = True
+                saveShowAlnsetsAsText = ShowAlignmentSets.SHOW_ALNSETS_AS_TEXT
+                ShowAlignmentSets.SHOW_ALNSETS_AS_TEXT = True
                 sys.argv = ['orbl.py', '--alignmentSets']
                 orblMain()
                 ae(streamCatcher.buffer('out'), '')
-                htmlFileName = streamCatcher.buffer('err')[:-1] # Remove \n
+                outputLines = streamCatcher.buffer('err').strip('\n').split('\n')
+                firstLineStart, htmlFileName = outputLines[0][:-1].rsplit(None, 1)
                 at(os.path.exists(htmlFileName))
+                ae(firstLineStart, 'Alignment Set list was written to')
+                ae(outputLines[1],
+                   'However, could not open web browser. '
+                   'Printing a text version instead.')
+                ae(outputLines[2].split(), # Split to allow changes in number of spaces
+                   ['Alignment', 'Set', 'ORBLq', 'Reference',
+                    'Number', 'of', 'Source', 'Subset'])
+                ae(outputLines[3].split(),
+                   ['Assembly', 'Species', 'Alignment', 'Description'])
+                ae(outputLines[-4], '')
+                ae(outputLines[-3], 'Tree files in Newick and pdf format can be found in:')
+                ae(outputLines[-2],
+                   '    https://data.broadinstitute.org/compbio1/CodAlignViewFiles'
+                   '/TreeNHs/{Alignment Set}.nh')
+                ae(outputLines[-1],
+                   '    https://data.broadinstitute.org/compbio1/CodAlignViewFiles'
+                   '/TreePdfs/{Alignment Set}.pdf')
+                tableLines = outputLines[4 : -4]
                 streamCatcher.clear('both')
                 with open(htmlFileName, 'rt') as htmlFile :
                     alnsetsHtmlEd = ShowAlignmentSets.AlnsetsHtmlEditor(htmlFile.read())
@@ -118,6 +155,13 @@ class TestORBL(unittest.TestCase) :
                        ['Alignment Set', 'ORBLq', 'Reference<br>Assembly',
                         'Number of<br>Species', 'Source<br>Alignment',
                         'Subset<br>Description', 'Tree NH', 'Tree PDF'])
+                    rowNames = alnsetsHtmlEd.get_row_names()
+                    # Check that text table and html table have same Alignment Set names
+                    ae([line.split()[0] for line in tableLines], rowNames)
+                    # Check that text table and html table have the same ORBLq status
+                    for rowName, line in zip(rowNames, tableLines) :
+                        ae(alnsetsHtmlEd.get_values_from_row_name(rowName)[1] == 'yes',
+                           line.split()[1] == 'yes')
                     # Hidden alnset with ORBLq defined
                     ain('hg38_447mammals_chimp', alnsetsHtmlEd.get_row_names())
                     ae(alnsetsHtmlEd.get_values_from_row_name('hg38_447mammals_chimp')[1],
@@ -130,7 +174,7 @@ class TestORBL(unittest.TestCase) :
                     ae(alnsetsHtmlEd.get_values_from_row_name('hg18')[1], '')
                     # Non-existent alnset
                     ar(ValueError, alnsetsHtmlEd.get_values_from_row_name, 'hg17')
-                ShowAlignmentSets.PRINT_HTML_FILE_NAME = savePrintHtmlFileName
+                ShowAlignmentSets.SHOW_ALNSETS_AS_TEXT = saveShowAlnsetsAsText
 
                 ## Test non-existent option
                 sys.argv = ['orbl.py', '--q'] # No such option
@@ -171,15 +215,23 @@ class TestORBL(unittest.TestCase) :
                                      inputLine.replace(' ', '\t') + '\t0.648645306038\n')
                 streamCatcher.clear('both')
 
-                ## Test orblq example
-                # Also tests tabs between region/strand/biotype; extra field.
+                ## Test orblq example. Also tests tabs between region/strand/biotype;
+                # extra field; header without extraFields; writeBed without ORFNameField
                 inputLine = regionStr + '\t-\tintORF+2\tc1riboseqorf13'
-                sys.argv = ['orbl.py', PlacentalAlnset, '--orblq']
+                sys.argv = ['orbl.py', PlacentalAlnset, '--orblq', '--header',
+                            '--writeBed', tempBedName]
                 with StdinSaver(inputLine) :
                     orblMain() # Warning: removes the --orblq from sys.argv
                 ae(streamCatcher.buffer('err'), '') # Nothing written to stderr
-                compare_output_lines(streamCatcher.buffer('out'),
-                                     inputLine + '\t0.648645306038\t0.835130970724\n')
+                compare_outputs(
+                    streamCatcher.buffer('out'),
+                    'Intervals\tStrand\tBiotypeWithFS\tExtra1\tORBLv\tORBLq\n' +
+                    inputLine + '\t0.648645306038\t0.835130970724\n')
+                with open(tempBedName, 'rt') as bedFile :
+                    # Tests default ORF name chr1_-_3891002_1. Also 2-exon bed file.
+                    compare_outputs(bedFile.read(),
+                                    'chr1\t3891001\t3892889\tchr1_-_3891002_1\t0\t-\t'
+                                    '3891001\t3892889\t0\t2\t56,7\t0,1881\n')
                 streamCatcher.clear('both')
 
                 ## Test real alnset for which orblq is not implemented (hg18)
@@ -208,20 +260,60 @@ class TestORBL(unittest.TestCase) :
 
                 ## Test --components, reading from file, primate alignment, and many cases
                 ##     of success and failure for individual input lines.
-                tempHandle, tempName = tempfile.mkstemp(prefix = 'temp', suffix = '.in')
-                os.close(tempHandle)
-                with open(tempName, 'wt') as orblInFile :
-                    orblInFile.write(InputLines)
-                sys.argv = ['orbl.py',  '--orblq', PrimateAlnset, tempName,
-                            '--components']
+                # Note: orbl.py infers the number of extra fields (Extra1, Extra2, ...)
+                # from the first non-comment input line.  Our test input intentionally
+                # begins with a valid line that *does* include an extra field, but many
+                # subsequent lines do not.  Split into two runs so the first line does
+                # not force extra-field inference for the remaining cases.
+                for InputLines, ExpectedOutput in zip(InputLinesList, ExpectedOutputsList) :
+                    with open(tempInName, 'wt') as orblInFile :
+                        orblInFile.write(InputLines)
+                    sys.argv = ['orbl.py',  '--orblq', PrimateAlnset, tempInName,
+                                '--components']
+                    orblMain()
+                    ae(streamCatcher.buffer('err'), '')  # Nothing written to stderr
+                    outputLines = streamCatcher.buffer('out').split('\n')
+                    for outputLine, expectedLine in zip_longest(
+                            outputLines, ExpectedOutput.split('\n')) :
+                        compare_output_lines(outputLine, expectedLine)
+                    streamCatcher.clear('both')
+
+                ## Test --CodAlignView, --UCSCView, --header, --extraFields, --writeBed,
+                ##    --ORFNameField, and output to file.
+                with open(tempInName, 'wt') as orblInFile :
+                    orblInFile.write(InputForHeaderEtAl)
+                sys.argv = [
+                    'orbl.py', 'hg38_58', tempInName, tempOutName,
+                    '--orblq', '--components', '--CodAlignView', '--UCSCView',
+                    '--header', '--extraFields', 'Name,NumCodons',
+                    '--writeBed', tempBedName, '--ORFNameField', 'Name']
                 orblMain()
                 ae(streamCatcher.buffer('err'), '')  # Nothing written to stderr
-                outputLines = streamCatcher.buffer('out').split('\n')
-                for outputLine, expectedLine in zip_longest(outputLines,
-                                                            ExpectedOutput.split('\n')) :
-                    compare_output_lines(outputLine, expectedLine)
-                os.remove(tempName)
+                ae(streamCatcher.buffer('out'), '')  # Nothing written to stdout
+                with open(tempOutName, 'rt') as outFile :
+                    compare_outputs(outFile.read(), ExpectedOutputForHeaderEtAl)
+                with open(tempBedName, 'rt') as bedFile :
+                    ae(bedFile.read(), ExpectedBedForHeaderEtAl)
                 streamCatcher.clear('both')
+
+                ## Test some errors
+                for args, errStr in [
+                    (['--ORFNameField'], 'Argument --ORFNameField requires a value.\n'),
+                    ([ '--ORFNameField', 'xxx'],
+                     '--ORFNameField is only allowed with --writeBed.\n'),
+                    (['--writeBed', tempBedName, '--ORFNameField', 'xxx'],
+                     'No field named xxx.\n'),
+                ] :
+                    sys.argv = ['orbl.py'] + args
+                    try :
+                        orblMain()
+                    except SystemExit as ex :
+                        ae(ex.code, 1)
+                        ae(streamCatcher.buffer('err'), errStr)
+                        ae(streamCatcher.buffer('out'), '')
+                    else :
+                        self.fail('orbl.py %s did not raise' % ''.join(args))
+                    streamCatcher.clear('both')
 
                 ## Test interactive mode
                 inputLines = '# First line\nchr1:1\n# comment\n\n# skip this'
@@ -229,18 +321,18 @@ class TestORBL(unittest.TestCase) :
                 with StdinSaver(InteractiveStringIO(inputLines)) :
                     orblMain()
                 ae(streamCatcher.buffer('err'),
-                   'Enter: intervals strand (tab-separated) '
-                   '(e.g., chr10:1042727-1042762+chr10:1043301-1043321   -)\n')
+                   'Enter: Intervals\tStrand (tab-separated)\n'
+                   ' e.g., chr10:1042727-1042762+chr10:1043301-1043321\t-\n')
                 # For interactive intput it should stop at the blank line
                 ae(streamCatcher.buffer('out'),
-                   '# First line\nchr1:1	InvalidRegion\n# comment\n')
+                   '# First line\nchr1:1\tInvalidRegion\n# comment\n')
                 streamCatcher.clear('both')
                 sys.argv = ['orbl.py', '--orblq', PrimateAlnset]
                 with StdinSaver(InteractiveStringIO('# Only line\n')) :
                     orblMain()
                 ae(streamCatcher.buffer('err'),
-                   'Enter: intervals strand biotype+frame_shift (tab-separated) '
-                   '(e.g., chr10:1042727-1042762+chr10:1043301-1043321   -   intORF+1)\n')
+                   'Enter: Intervals\tStrand\tBiotype+FrameShift (tab-separated)\n'
+                   ' e.g., chr10:1042727-1042762+chr10:1043301-1043321\t-\tintORF+1\n')
                 ae(streamCatcher.buffer('out'), '# Only line\n')
                 streamCatcher.clear('both')
 
@@ -252,19 +344,29 @@ class TestORBL(unittest.TestCase) :
                 ae(error.decode('utf-8'), 'Version: %s\n' % currentVersion)
                 ae(out.decode('utf-8'), '')
 
-InputLines = ('''# Valid two-interval region; spaces between region/strand/biotype
+        for fileName in [tempInName, tempOutName, tempBedName] :
+            if os.path.exists(fileName) :
+                os.remove(fileName)
+
+
+InputLinesList = ['''# Valid two-interval region; spaces between region/strand/biotype
 chr1:3891002-3891057+chr1:3892883-3892889 - intORF+2	c1riboseqorf13
-# Invalid region
+chr1:3891002-3891057+chr1:3892883-3892889 - intORF+2
+chr1:3891002-3891057+chr1:3892883-3892889 - intORF+2	c1riboseqorf13	21
+''',
+'''# Invalid region
 chr1:3891002-3891055+chr1:3892883	-
 # start > end
 chr1:3891051-3890992	+
+# More than one chromosome
+chr1:3891002-3891057+chr2:3892883-3892889	-
 # Missing strand
 chr1:3890992-3891051
 # Invalid strand
 chr1:3890992-3891051	.
 # No alignment (no such chromosome)
 chr25:3890992-3891051	+
-# Blank line (don't stop for non-intractive input)
+# Blank line (don't stop for non-interactive input, just pass through to output)
 
 # Missing biotype
 chr1:3890992-3891051	+
@@ -274,23 +376,29 @@ chr1:3890992-3891051 +	uORF+1
 chr1:3890992-3891051 +	mixed
 # orblv is NA (tab/space between region/strand/biotype)
 chr1:3890995-3891051 +	uORF
-''')
+''']
 
-ExpectedOutput = ('''# Valid two-interval region; spaces between region/strand/biotype
+ExpectedOutputsList = ['''# Valid two-interval region; spaces between region/strand/biotype
 chr1:3891002-3891057+chr1:3892883-3892889	-	intORF+2	c1riboseqorf13	\
 0.974690114626	0.902157164869	0.974690114626	1.0	0.974690114626
-# Invalid region
+chr1:3891002-3891057+chr1:3892883-3892889	-	intORF+2	TooFewExtraFields
+chr1:3891002-3891057+chr1:3892883-3892889	-	intORF+2	c1riboseqorf13	21	\
+TooManyExtraFields
+''',
+'''# Invalid region
 chr1:3891002-3891055+chr1:3892883	-	InvalidRegion
 # start > end
 chr1:3891051-3890992	+	BackwardsInterval
+# More than one chromosome
+chr1:3891002-3891057+chr2:3892883-3892889	-	MoreThanOneChromosome
 # Missing strand
 chr1:3890992-3891051	MissingStrand
 # Invalid strand
 chr1:3890992-3891051	.	InvalidStrand
 # No alignment (no such chromosome)
 chr25:3890992-3891051	+	UnableToDownloadAlignment
-# Blank line (don't stop for non-intractive input)
-	InvalidRegion
+# Blank line (don't stop for non-interactive input, just pass through to output)
+
 # Missing biotype
 chr1:3890992-3891051	+	0.432983873668	MissingBiotypeWithFS	0.698355707319	\
 0.856181535801	0.432983873668
@@ -302,8 +410,21 @@ chr1:3890992-3891051	+	mixed	0.432983873668	NA	0.698355707319	0.856181535801	\
 0.432983873668
 # orblv is NA (tab/space between region/strand/biotype)
 chr1:3890995-3891051	+	uORF	NA	NA	NA	0.856181535801	0.432983873668
-''')
+''']
 
+InputForHeaderEtAl = 'chr1:16395157-16395234	+	dORF	c1riboseqorf29	26'
+ExpectedOutputForHeaderEtAl = (
+    'Intervals	Strand	BiotypeWithFS	Name	NumCodons	ORBLv	ORBLq	ATGRelBL	'
+    'StopRelBL	FrameRelBL	CodAlignView	UCSCView\n'
+    'chr1:16395157-16395234	+	dORF	c1riboseqorf29	26	'
+    '0.819463199838	0.995604904002	0.871454537388	0.98745916947	0.95279827777	'
+    'https://data.broadinstitute.org/compbio1/cav.php?'
+    'a=hg38_58&i=chr1:16395157-16395234&s=+&p=15&e=15&os	'
+    'https://genome.ucsc.edu/cgi-bin/hgTracks?'
+    'db=hg38&position=chr1:16395157-16395234&complement_hg38=0&hgt.revCmplDisp_hg38=0\n')
+ExpectedBedForHeaderEtAl = (
+    'chr1	16395156	16395234	c1riboseqorf29	0	+	16395156	16395234	'
+    '0	1	78	0\n')
 
 class TestCalcSeqConservations(unittest.TestCase) :
     """
