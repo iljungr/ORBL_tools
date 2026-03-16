@@ -1,0 +1,6 @@
+Intervals	Strand	BiotypeWithFS	Name	NumCodons	ORBLv	ORBLq	ATGRelBL	StopRelBL	FrameRelBL	CodAlignView	UCSCView
+## Note: two extra fields represent ORF name and number of codons
+# A one-exon dORF:
+chr1:16395157-16395234	+	dORF	c1riboseqorf29	26	0.819463199838	0.995604904002	0.871454537388	0.98745916947	0.95279827777	https://data.broadinstitute.org/compbio1/cav.php?a=hg38_58&i=chr1:16395157-16395234&s=+&p=15&e=15&os	https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&position=chr1:16395157-16395234&complement_hg38=0&hgt.revCmplDisp_hg38=0
+# A two-exon intORF shifted +1 nt from main frame:
+chr10:1042727-1042762+chr10:1043301-1043321	-	intORF+1	c10norep2	19	0.784094359425	0.795394736842	0.79508168879	0.91804761436	0.896868943009	https://data.broadinstitute.org/compbio1/cav.php?a=hg38_58&i=chr10:1042727-1042762+chr10:1043301-1043321&s=-&p=15&e=15&os	https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&position=chr10:1042727-1043321&complement_hg38=1&hgt.revCmplDisp_hg38=1

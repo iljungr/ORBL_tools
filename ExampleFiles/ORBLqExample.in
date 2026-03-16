@@ -1,0 +1,5 @@
+## Note: two extra fields represent ORF name and number of codons
+# A one-exon dORF:
+chr1:16395157-16395234	+	dORF	c1riboseqorf29	26
+# A two-exon intORF shifted +1 nt from main frame:
+chr10:1042727-1042762+chr10:1043301-1043321	-	intORF+1	c10norep2	19

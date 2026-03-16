@@ -1,0 +1,5 @@
+## Note: two extra fields represent ORF name and number of codons
+# A one-exon dORF:
+chr1:16395157-16395234	+	dORF	c1riboseqorf29	26	0.994444706512	0.996297153437	https://data.broadinstitute.org/compbio1/cav.php?a=hg38_243primates&i=chr1:16395157-16395234&s=+&p=15&e=15&os
+# A two-exon intORF shifted +1 nt from main frame:
+chr10:1042727-1042762+chr10:1043301-1043321	-	intORF+1	c10norep2	19	0.833713772092	0.56202698256	https://data.broadinstitute.org/compbio1/cav.php?a=hg38_243primates&i=chr10:1042727-1042762+chr10:1043301-1043321&s=-&p=15&e=15&os
