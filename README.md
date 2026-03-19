@@ -4,24 +4,27 @@
 
 ORF Relative Branch Length (ORBL) measures cross-species evolutionary conservation and
 constraint on the "ORFness" of an open reading frame (ORF), without regard to
-conservation of the encoded amino acid sequence. It is intended to detect ORFs, such
-as regulatory uORFs, whose translation is functional but which do not necessarily encode
-a functional peptide, as well as ORFs encoding poorly conserved peptides. It uses
-multispecies whole-genome alignments to obtain the local alignment of the ORF in a
-particular clade, and then computes two scores:
+conservation of the encoded amino acid sequence. It is intended to detect ORFs encoding
+poorly conserved peptides, as well as ORFs whose translation is functional but which do
+not necessarily encode a functional peptide, such as regulatory uORFs. This is
+particularly relevant for non-canonical ORFs (ncORFs). ORBL uses multispecies
+whole-genome alignments to obtain the local alignment of the ORF in a particular clade,
+and then computes two scores:
 
 - ORBLv measures conservation of ORFness by calculating the relative branch length of the
   phylogenetic tree of species in the alignment that have an intact orthologous ORF,
   i.e., in which there is an aligned ATG start codon, stop codon, and open reading frame.
   It is a number between 0 and 1, with larger numbers indicating more conservation.
 
+
 - ORBLq measures evolutionary constraint on ORFness by calculating the quantile of its
   ORBLv score among the ORBLv scores of untranslated ORFs of the same biotype and similar
-  length. Comparison to these matched ORFs corrects for conservation due to chance or
-  constraint on an overlapping CDS. ORBLq is also a number between 0 and 1, with larger
-  numbers indicating more constraint. The number 1 - ORBLq can be interpreted as a
-  p-value, since it approximates the probability that a similar ORF would get the same or
-  higher ORBLv score under the null hypothesis that its ORFness were not constrained.
+  length. Comparison to these matched ORFs corrects for conservation due to chance or to
+  constraint on an overlapping coding sequence (CDS). ORBLq is also a number between 0
+  and 1, with larger numbers indicating more constraint. The number 1 - ORBLq can be
+  interpreted as a p-value, since it approximates the probability that a similar ORF
+  would get the same or higher ORBLv score under the null hypothesis that its ORFness
+  were not constrained.
 
 By detecting evolutionary constraint on translation itself, ORBL expands the 
 scope of comparative genomics to detect functional ORFs that would be missed
@@ -124,12 +127,14 @@ not ATG, last codon is not a stop codon, length is not a multiple of three nucle
 or contains a premature in-frame stop codon) then both ORBLv and ORBLq will be "NA",
 as well as the corresponding components if the --components option is specified.
 
-If --orblq is specified, each output line will report the ORBLq score after the ORBLv
-score. In that case, each input line must include a third field, containing the
-biotype and, for biotypes uoORF, intORF, and doORF, the frameshift relative to the main
-ORF. Frameshift is +1 or +2 depending on whether a ribosome reading the main frame would
-need to skip 1 or 2 nucleotides to get in the frame of the ORF. Valid values of
-biotype-with-frameshift are:
+If --orblq is specified, each input line must include a third field containing the ORF
+biotype, and each output line will report the ORBLq score after the ORBLv score. Biotypes
+for non-canonical ORFs are explained
+[here](https://github.com/iljungr/ORBL_tools/blob/main/docs/ncORF_Biotypes.pdf). For
+biotypes uoORF, intORF, and doORF, which indicate overlap with a known CDS, the
+frameshift relative to the CDS must be appended. Frameshift is +1 or +2 depending on
+whether a ribosome reading the main frame would need to skip 1 or 2 nucleotides to get in
+the frame of the ORF. Valid values of biotype-with-frameshift are:
 ```
 uORF, uoORF+1, uoORF+2, intORF+1, intORF+2, doORF+1, doORF+2, dORF, and lncRNA-ORF.
 ```
