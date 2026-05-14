@@ -317,7 +317,7 @@ If you use ORBL, please cite:
 *Nature* 2026 https://doi.org/10.1038/s41586-026-10459-x.
 - **Jungreis, I. and Kellis, M.** ORBL_tools: tools for measuring evolutionary conservation 
   and constraint of 'ORFness' of an open reading frame. (v1.0). *Zenodo*. (2026).
-  [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18749291.svg)](https://doi.org/10.5281/zenodo.18749291)
+  [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20186544.svg)](https://doi.org/10.5281/zenodo.20186544)
 
 More information about ORBL can be found in Deutsch et al. The specific requirements
 for determining an ORF's biotype are reported in the supplementary materials.
