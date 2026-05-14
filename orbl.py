@@ -26,7 +26,7 @@ from ORBL_tools.orblq import (
 from ORBL_tools.ShowAlignmentSets import (
     show_alignment_sets, get_alignment_set_assembly)
 
-VersionStr = 'Beta'
+VersionStr = '1.0'
 
 print_err = lambda *pArgs : print(*pArgs, file = sys.stderr)
 

@@ -307,15 +307,16 @@ ORBLq to measure constraint.
 
 ## Credits
 
-Questions should be directed to [Irwin Jungreis](mailto:iljungr@csail.mit.edu)
+Questions should be directed to [Irwin Jungreis](mailto:iljungr@csail.mit.edu) and
+[Manolis Kellis](mailto:manoli@mit.edu).
 
 ## Citing ORBL
 
 If you use ORBL, please cite:
 - **Deutsch et al.** Expanding the human proteome with microproteins and peptideins. 
-*Nature* 2026 (manuscript accepted in principle).
-- **Jungreis, I.** ORBL_tools: tools for measuring evolutionary conservation 
-  and constraint of 'ORFness' of an open reading frame. (v0.9-beta). *Zenodo*. (2026).
+*Nature* 2026 https://doi.org/10.1038/s41586-026-10459-x.
+- **Jungreis, I. and Kellis, M.** ORBL_tools: tools for measuring evolutionary conservation 
+  and constraint of 'ORFness' of an open reading frame. (v1.0). *Zenodo*. (2026).
   [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18749291.svg)](https://doi.org/10.5281/zenodo.18749291)
 
 More information about ORBL can be found in Deutsch et al. The specific requirements

@@ -69,7 +69,7 @@ class TestORBL(unittest.TestCase) :
         ar = self.assertRaises
         ain = self.assertIn
         aaeq = lambda x, y : at(abs(x - y) < 1e-11)  # "assertAlmostEqual"
-        currentVersion = 'Beta'
+        currentVersion = '1.0'
 
         # Get names for temporary files
         tempHandle, tempInName  = tempfile.mkstemp(suffix = '.in')

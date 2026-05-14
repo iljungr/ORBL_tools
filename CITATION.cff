@@ -6,6 +6,9 @@ authors:
   - family-names: Jungreis
     given-names: Irwin
     orcid: "https://orcid.org/0000-0002-3197-5367"
+  - family-names: Kellis
+    given-names: Manolis
+    orcid: "https://orcid.org/0000-0001-7113-9630"
 repository-code: "https://github.com/iljungr/ORBL_tools"
 license: "Apache-2.0"
 keywords:
