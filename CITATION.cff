@@ -6,10 +6,15 @@ authors:
   - family-names: Jungreis
     given-names: Irwin
     orcid: "https://orcid.org/0000-0002-3197-5367"
+    affiliation: "MIT Computer Science and Artificial Intelligence Laboratory; Broad Institute of MIT and Harvard"
   - family-names: Kellis
     given-names: Manolis
     orcid: "https://orcid.org/0000-0001-7113-9630"
+    affiliation: "MIT Computer Science and Artificial Intelligence Laboratory; Broad Institute of MIT and Harvard"
 repository-code: "https://github.com/iljungr/ORBL_tools"
+doi: 10.5281/zenodo.18749291
+url: "https://doi.org/10.5281/zenodo.18749291"
+version: "1.0.0"
 license: "Apache-2.0"
 keywords:
   - open reading frame
