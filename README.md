@@ -316,8 +316,10 @@ If you use ORBL, please cite:
 - **Deutsch et al.** Expanding the human proteome with microproteins and peptideins. 
 *Nature* 2026 https://doi.org/10.1038/s41586-026-10459-x.
 - **Jungreis, I. and Kellis, M.** ORBL_tools: tools for measuring evolutionary conservation 
-  and constraint of 'ORFness' of an open reading frame. (v1.0). *Zenodo*. (2026).
-  [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20186544.svg)](https://doi.org/10.5281/zenodo.20186544)
+  and constraint of 'ORFness' of an open reading frame. *Zenodo*. (2026).
+  [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18749291.svg)](https://doi.org/10.5281/zenodo.18749291)
+  (This DOI refers to all versions. For reproducibility, please cite the
+specific version you used (e.g., v1.0), available by running "orbl.py --version".)
 
 More information about ORBL can be found in Deutsch et al. The specific requirements
 for determining an ORF's biotype are reported in the supplementary materials.
